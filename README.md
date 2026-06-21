@@ -186,5 +186,5 @@ git commit -m "trabalho couchbase - estrutura inicial"
 
 ## Contato
 
-- **Éverton Coelho** — kai@codr.studio
-- **Pedro** — _adicionar e-mail_
+- **Éverton Coelho**
+- **Pedro NAscimento**
