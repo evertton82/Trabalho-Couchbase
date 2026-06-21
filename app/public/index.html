@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Biblioteca · Couchbase</title>
+<style>
+  :root, html[data-theme="dark"] {
+    --bg: #0A1220; --bg2: #0E1B2C; --side: #0C1726;
+    --panel: #16293E; --panel2: #1E3957; --stroke: #25456A; --soft: #18304A;
+    --red: #FF4D5E; --redm: #FF7480; --teal: #49D0BE; --amber: #F6C453; --green: #5FD08A;
+    --text: #ECF2F9; --muted: #8DA2B8; --dim: #5C7794; --code: #081120;
+    --shadow: 0 10px 30px rgba(0,0,0,.35);
+    --glow: rgba(73,208,190,.06); --backdrop: rgba(5,10,18,.55);
+    --j-txt: #C9D7E6; --j-k: #7EE787; --j-s: #A5D6FF; --j-n: #79C0FF; --j-b: #FF7B72; --j-p: #6E8199;
+  }
+  html[data-theme="light"] {
+    --bg: #EDF1F7; --bg2: #FFFFFF; --side: #FFFFFF;
+    --panel: #FFFFFF; --panel2: #EDF2F9; --stroke: #DBE3EE; --soft: #F0F4FA;
+    --red: #E23545; --redm: #E23545; --teal: #1BA89A; --amber: #C98A12; --green: #2E9E5B;
+    --text: #15263A; --muted: #5A6B80; --dim: #93A2B5; --code: #F3F6FB;
+    --shadow: 0 10px 30px rgba(20,45,80,.10);
+    --glow: rgba(27,168,154,.07); --backdrop: rgba(30,50,80,.35);
+    --j-txt: #243149; --j-k: #1A7F37; --j-s: #0A5BC4; --j-n: #0550AE; --j-b: #CF222E; --j-p: #8893A4;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 14px;
+    display: grid; grid-template-columns: 248px 1fr; height: 100vh; overflow: hidden;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #20405f; border-radius: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar {
+    background: var(--side); border-right: 1px solid var(--stroke);
+    display: flex; flex-direction: column; padding: 20px 14px; gap: 4px;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; padding: 6px 10px 20px; }
+  .brand .mark {
+    width: 38px; height: 38px; border-radius: 10px; flex: none;
+    background: linear-gradient(135deg, var(--red), #c9374a);
+    display: grid; place-items: center; box-shadow: 0 4px 12px rgba(255,77,94,.3);
+  }
+  .brand .mark svg { width: 21px; height: 21px; }
+  .brand .name { font-size: 17px; font-weight: 700; letter-spacing: .2px; }
+  .brand .name small { display: block; font-size: 11px; font-weight: 500; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+
+  .nav-label { font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; padding: 14px 12px 6px; font-weight: 700; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 9px;
+    cursor: pointer; color: var(--muted); font-weight: 600; transition: all .15s; position: relative;
+  }
+  .nav-item svg { width: 18px; height: 18px; flex: none; }
+  .nav-item:hover { background: var(--soft); color: var(--text); }
+  .nav-item.active { background: var(--panel2); color: var(--text); }
+  .nav-item.active::before {
+    content: ""; position: absolute; left: -14px; top: 50%; transform: translateY(-50%);
+    width: 4px; height: 22px; background: var(--accent, var(--red)); border-radius: 0 3px 3px 0;
+  }
+  .nav-item .cnt {
+    margin-left: auto; background: var(--code); border: 1px solid var(--stroke);
+    color: var(--muted); font-size: 11px; padding: 1px 8px; border-radius: 20px; min-width: 24px; text-align: center;
+  }
+  .nav-item.active .cnt { color: var(--text); border-color: var(--accent, var(--red)); }
+  .side-foot { margin-top: auto; padding: 12px; border-top: 1px solid var(--stroke); }
+  .status { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--muted); }
+  .status .led { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .status .led.off { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .side-foot .sub { font-size: 11px; color: var(--dim); margin-top: 6px; font-family: "Consolas", monospace; }
+
+  /* ---------- MAIN ---------- */
+  .main { display: flex; flex-direction: column; overflow: hidden; background:
+    radial-gradient(1200px 500px at 80% -10%, var(--glow), transparent 60%), var(--bg); }
+  .topbar {
+    display: flex; align-items: center; gap: 18px; padding: 22px 30px 18px;
+  }
+  .topbar .title h1 { font-size: 24px; margin: 0; font-weight: 700; }
+  .topbar .title p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+  .search {
+    margin-left: auto; position: relative; width: 280px;
+  }
+  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--dim); }
+  .search input {
+    width: 100%; padding: 10px 12px 10px 36px; background: var(--panel); border: 1px solid var(--stroke);
+    border-radius: 10px; color: var(--text); font-size: 14px; font-family: inherit;
+  }
+  .search input:focus { outline: none; border-color: var(--teal); }
+  .btn {
+    font-family: inherit; font-size: 14px; font-weight: 600; padding: 10px 18px; border-radius: 10px;
+    cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn svg { width: 16px; height: 16px; }
+  .btn-primary { background: var(--accent, var(--red)); color: #fff; box-shadow: 0 4px 14px rgba(255,77,94,.25); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost { background: var(--panel); color: var(--muted); border-color: var(--stroke); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--teal); }
+  .icon-btn {
+    width: 42px; height: 42px; padding: 0; justify-content: center; flex: none;
+    background: var(--panel); color: var(--muted); border: 1px solid var(--stroke); border-radius: 10px; cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--amber); border-color: var(--amber); }
+  .icon-btn svg { width: 19px; height: 19px; }
+
+  /* stats */
+  .stats { display: flex; gap: 14px; padding: 0 30px 18px; }
+  .stat {
+    background: var(--panel); border: 1px solid var(--stroke); border-radius: 12px;
+    padding: 14px 18px; min-width: 130px; position: relative; overflow: hidden;
+  }
+  .stat::after { content: ""; position: absolute; left: 0; top: 0; width: 3px; height: 100%; background: var(--accent, var(--red)); }
+  .stat .v { font-size: 26px; font-weight: 700; font-family: Georgia, serif; }
+  .stat .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* table */
+  .table-wrap { flex: 1; overflow: auto; padding: 0 30px 30px; }
+  .panel { background: var(--panel); border: 1px solid var(--stroke); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 14px 16px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px;
+    color: var(--dim); font-weight: 700; border-bottom: 1px solid var(--stroke); position: sticky; top: 0;
+    background: var(--panel); z-index: 1;
+  }
+  tbody td { padding: 13px 16px; border-bottom: 1px solid var(--stroke); vertical-align: middle; }
+  tr.row { cursor: pointer; transition: background .12s; }
+  tr.row:hover td { background: rgba(73,208,190,.05); }
+  tr.row.open td { background: rgba(73,208,190,.07); }
+  .chev { width: 16px; height: 16px; color: var(--dim); transition: transform .2s; }
+  tr.row.open .chev { transform: rotate(90deg); color: var(--teal); }
+  .key { font-family: "Consolas", monospace; color: var(--teal); font-size: 13px; }
+  .tag {
+    display: inline-block; background: var(--panel2); border: 1px solid var(--stroke);
+    border-radius: 6px; padding: 2px 9px; margin: 1px 2px; font-size: 12px; color: var(--text);
+  }
+  .pill { display: inline-block; padding: 2px 11px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .pill.ativo { background: rgba(95,208,138,.15); color: var(--green); border: 1px solid rgba(95,208,138,.3); }
+  .pill.devolvido { background: rgba(141,162,184,.15); color: var(--muted); border: 1px solid var(--stroke); }
+  .pill.atrasado { background: rgba(255,77,94,.15); color: var(--redm); border: 1px solid rgba(255,77,94,.3); }
+
+  /* expanded detail */
+  tr.detail > td { padding: 0; border-bottom: 1px solid var(--stroke); background: var(--code); }
+  .detail-inner { max-height: 0; overflow: hidden; transition: max-height .28s ease; }
+  tr.detail.open .detail-inner { max-height: 520px; }
+  .detail-pad { padding: 18px 22px 20px; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: start; }
+  pre.json {
+    margin: 0; font-family: "Consolas", monospace; font-size: 13px; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word; color: var(--j-txt); max-height: 420px; overflow: auto;
+  }
+  .json .k { color: var(--j-k); } .json .s { color: var(--j-s); } .json .n { color: var(--j-n); }
+  .json .b { color: var(--j-b); } .json .p { color: var(--j-p); }
+  .detail-actions { display: flex; flex-direction: column; gap: 9px; min-width: 150px; }
+
+  .empty { padding: 60px 20px; text-align: center; color: var(--muted); }
+  .empty svg { width: 46px; height: 46px; color: var(--dim); margin-bottom: 12px; }
+  .loading { padding: 60px; text-align: center; color: var(--dim); }
+
+  /* ---------- DRAWER ---------- */
+  .backdrop {
+    position: fixed; inset: 0; background: var(--backdrop); backdrop-filter: blur(2px);
+    opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 40;
+  }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; top: 0; right: 0; height: 100%; width: 440px; max-width: 92vw; z-index: 50;
+    background: var(--bg2); border-left: 1px solid var(--stroke); box-shadow: -16px 0 40px rgba(0,0,0,.4);
+    transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head { padding: 22px 26px; border-bottom: 1px solid var(--stroke); display: flex; align-items: center; gap: 12px; }
+  .drawer-head .ico { width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center; background: var(--panel2); }
+  .drawer-head .ico svg { width: 19px; height: 19px; color: var(--accent, var(--red)); }
+  .drawer-head h2 { margin: 0; font-size: 18px; }
+  .drawer-head p { margin: 2px 0 0; font-size: 12px; color: var(--muted); font-family: "Consolas", monospace; }
+  .drawer-head .x { margin-left: auto; cursor: pointer; color: var(--muted); padding: 6px; border-radius: 8px; }
+  .drawer-head .x:hover { background: var(--panel); color: var(--text); }
+  .drawer-body { padding: 22px 26px; overflow-y: auto; flex: 1; }
+  .drawer-foot { padding: 18px 26px; border-top: 1px solid var(--stroke); display: flex; gap: 12px; }
+  .drawer-foot .btn { flex: 1; justify-content: center; }
+
+  label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+  label .req { color: var(--red); }
+  input, select {
+    width: 100%; padding: 11px 13px; background: var(--code); color: var(--text);
+    border: 1px solid var(--stroke); border-radius: 9px; font-size: 14px; font-family: inherit;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(73,208,190,.12); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hint { font-size: 11px; color: var(--dim); margin-top: 5px; }
+
+  /* toast */
+  #toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: var(--panel2); border: 1px solid var(--stroke); color: var(--text);
+    padding: 13px 22px; border-radius: 11px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px;
+    opacity: 0; transition: all .25s; pointer-events: none; z-index: 60; font-size: 14px; font-weight: 500;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.ok { border-color: var(--green); } #toast.ok .ic { color: var(--green); }
+  #toast.err { border-color: var(--red); } #toast.err .ic { color: var(--red); }
+  #toast .ic { width: 18px; height: 18px; }
+
+  @media (max-width: 760px) { body { grid-template-columns: 0 1fr; } .sidebar { display: none; } }
+</style>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+      </div>
+      <div class="name">Biblioteca<small>Couchbase</small></div>
+    </div>
+
+    <div class="nav-label">Coleções</div>
+    <nav id="nav"></nav>
+
+    <div class="side-foot">
+      <div class="status"><span class="led" id="led"></span><span id="connTxt">Conectado</span></div>
+      <div class="sub">bucket · biblioteca</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="title">
+        <h1 id="secTitle">Livros</h1>
+        <p id="secSub">Gerencie os documentos da coleção</p>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="search" type="text" placeholder="Buscar…" autocomplete="off" />
+      </div>
+      <button class="icon-btn" id="themeBtn" title="Alternar tema"></button>
+      <button class="btn btn-primary" id="newBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+        <span id="newLbl">Novo</span>
+      </button>
+    </div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="table-wrap">
+      <div class="panel">
+        <div id="tableArea"><div class="loading">Carregando…</div></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- DRAWER -->
+  <div class="backdrop" id="backdrop"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head">
+      <div class="ico" id="drawerIco"></div>
+      <div>
+        <h2 id="drawerTitle">Novo registro</h2>
+        <p id="drawerSub">&nbsp;</p>
+      </div>
+      <div class="x" id="drawerClose">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+    </div>
+    <div class="drawer-body"><form id="form" autocomplete="off"></form></div>
+    <div class="drawer-foot">
+      <button class="btn btn-ghost" id="cancelBtn">Cancelar</button>
+      <button class="btn btn-primary" id="saveBtn">Salvar</button>
+    </div>
+  </aside>
+
+  <div id="toast"></div>
+
+<script>
+// ===================== ícones =====================
+const IC = {
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h15"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
+  loan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+  chev: '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>',
+  ok: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>',
+  err: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>',
+  empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg>',
+  sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+};
+
+// ===================== schemas =====================
+const SCHEMAS = {
+  books: {
+    label: "Livros", singular: "Livro", coll: "books", icon: IC.book, accent: "#FF4D5E",
+    sub: "Acervo da biblioteca — títulos, gêneros e exemplares",
+    fields: [
+      { k: "id", t: "text", lbl: "Chave / ID", ph: "ex.: 007 → book::007", hint: "Vazio = gera automático", lockOnEdit: true },
+      { k: "title", t: "text", lbl: "Título", req: true },
+      { k: "authors", t: "list", lbl: "Autores", ph: "separe por vírgula" },
+      { k: "genre", t: "text", lbl: "Gênero", ph: "ficcao · historia · tecnologia" },
+      { k: "tags", t: "list", lbl: "Tags", ph: "classico, brasil" },
+      { k: "publishedYear", t: "number", lbl: "Ano", half: true },
+      { k: "copies", t: "number", lbl: "Exemplares", half: true },
+      { k: "isbn", t: "text", lbl: "ISBN" },
+    ],
+    columns: [
+      { h: "Chave", w: "150px", render: d => `<span class="key">${esc(d._id)}</span>` },
+      { h: "Título", render: d => `<strong>${esc(d.title || "")}</strong>` },
+      { h: "Gênero", render: d => esc(d.genre || "—") },
+      { h: "Tags", render: d => (d.tags || []).slice(0,3).map(t => `<span class="tag">${esc(t)}</span>`).join("") || "—" },
+      { h: "Exem.", w: "70px", render: d => d.copies ?? "—" },
+    ],
+  },
+  users: {
+    label: "Usuários", singular: "Usuário", coll: "users", icon: IC.user, accent: "#49D0BE",
+    sub: "Leitores e bibliotecários cadastrados",
+    fields: [
+      { k: "id", t: "text", lbl: "Chave / ID", ph: "ex.: 005 → user::005", hint: "Vazio = automático", lockOnEdit: true },
+      { k: "name", t: "text", lbl: "Nome", req: true },
+      { k: "email", t: "text", lbl: "E-mail" },
+      { k: "role", t: "select", lbl: "Papel", opts: ["leitor", "bibliotecario"] },
+      { k: "city", t: "text", lbl: "Cidade", half: true },
+      { k: "state", t: "text", lbl: "UF", half: true },
+      { k: "zip", t: "text", lbl: "CEP" },
+      { k: "memberSince", t: "date", lbl: "Membro desde" },
+    ],
+    columns: [
+      { h: "Chave", w: "150px", render: d => `<span class="key">${esc(d._id)}</span>` },
+      { h: "Nome", render: d => `<strong>${esc(d.name || "")}</strong>` },
+      { h: "E-mail", render: d => esc(d.email || "—") },
+      { h: "Papel", render: d => `<span class="tag">${esc(d.role || "—")}</span>` },
+      { h: "Cidade", render: d => esc([d.address?.city, d.address?.state].filter(Boolean).join(" / ") || "—") },
+    ],
+    toDoc: f => ({ name: f.name, email: f.email, role: f.role, address: { city: f.city, state: f.state, zip: f.zip }, memberSince: f.memberSince }),
+    fromDoc: d => ({ name: d.name, email: d.email, role: d.role, city: d.address?.city, state: d.address?.state, zip: d.address?.zip, memberSince: d.memberSince }),
+  },
+  loans: {
+    label: "Empréstimos", singular: "Empréstimo", coll: "loans", icon: IC.loan, accent: "#F6C453",
+    sub: "Relação entre usuários e livros emprestados",
+    fields: [
+      { k: "id", t: "text", lbl: "Chave / ID", ph: "ex.: 006 → loan::006", hint: "Vazio = automático", lockOnEdit: true },
+      { k: "userId", t: "text", lbl: "Usuário (chave)", ph: "user::001", req: true },
+      { k: "bookId", t: "text", lbl: "Livro (chave)", ph: "book::001", req: true },
+      { k: "borrowedAt", t: "date", lbl: "Emprestado em", half: true },
+      { k: "dueDate", t: "date", lbl: "Devolver até", half: true },
+      { k: "returnedAt", t: "date", lbl: "Devolvido em", hint: "Vazio se ainda não devolveu" },
+      { k: "status", t: "select", lbl: "Status", opts: ["ativo", "devolvido", "atrasado"] },
+    ],
+    columns: [
+      { h: "Chave", w: "150px", render: d => `<span class="key">${esc(d._id)}</span>` },
+      { h: "Usuário", render: d => `<span class="key">${esc(d.userId || "—")}</span>` },
+      { h: "Livro", render: d => `<span class="key">${esc(d.bookId || "—")}</span>` },
+      { h: "Devolver até", render: d => esc(d.dueDate || "—") },
+      { h: "Status", w: "120px", render: d => `<span class="pill ${esc(d.status||"")}">${esc(d.status || "—")}</span>` },
+    ],
+    toDoc: f => ({ userId: f.userId, bookId: f.bookId, borrowedAt: f.borrowedAt, dueDate: f.dueDate, returnedAt: f.returnedAt || null, status: f.status }),
+    fromDoc: d => ({ userId: d.userId, bookId: d.bookId, borrowedAt: d.borrowedAt, dueDate: d.dueDate, returnedAt: d.returnedAt || "", status: d.status }),
+  },
+};
+
+// ===================== estado =====================
+let current = "books";
+let editingKey = null;
+let rows = [];
+let counts = { books: "·", users: "·", loans: "·" };
+let openRow = null;
+
+const $ = s => document.querySelector(s);
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function setAccent(){ document.documentElement.style.setProperty('--accent', SCHEMAS[current].accent); }
+
+// ===================== tema =====================
+function applyTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("biblio-theme", t); } catch {}
+  $("#themeBtn").innerHTML = t === "dark" ? IC.sun : IC.moon;
+  $("#themeBtn").title = t === "dark" ? "Tema claro" : "Tema escuro";
+}
+function toggleTheme(){
+  const t = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  applyTheme(t);
+}
+
+function toast(msg, kind="ok"){
+  const t = $("#toast"); t.innerHTML = `${kind==="ok"?IC.ok:IC.err}<span>${esc(msg)}</span>`;
+  t.className = "show " + kind; clearTimeout(t._t); t._t = setTimeout(()=>t.className="", 2800);
+}
+
+// ===================== JSON highlight =====================
+function jsonHi(obj){
+  const json = JSON.stringify(obj, null, 2);
+  return esc(json).replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+    let cls = "n";
+    if (/^"/.test(m)) cls = /:$/.test(m) ? "k" : "s";
+    else if (/true|false|null/.test(m)) cls = "b";
+    return `<span class="${cls}">${m}</span>`;
+  });
+}
+
+// ===================== sidebar =====================
+function renderNav(){
+  $("#nav").innerHTML = Object.entries(SCHEMAS).map(([k,s]) =>
+    `<div class="nav-item ${k===current?"active":""}" data-k="${k}" style="--accent:${s.accent}">
+       ${s.icon}<span>${s.label}</span><span class="cnt">${counts[k]}</span></div>`).join("");
+  $("#nav").querySelectorAll(".nav-item").forEach(el =>
+    el.onclick = () => { if(el.dataset.k!==current){ current = el.dataset.k; openRow=null; $("#search").value=""; switchSection(); }});
+}
+
+function renderStats(){
+  const s = SCHEMAS[current];
+  let cards = [{ v: rows.length, l: `${s.label} no total` }];
+  if (current === "books") {
+    const ex = rows.reduce((a,b)=>a+(Number(b.copies)||0),0);
+    const gen = new Set(rows.map(r=>r.genre).filter(Boolean)).size;
+    cards.push({ v: ex, l: "Exemplares" }, { v: gen, l: "Gêneros" });
+  } else if (current === "users") {
+    const bib = rows.filter(r=>r.role==="bibliotecario").length;
+    cards.push({ v: rows.length-bib, l: "Leitores" }, { v: bib, l: "Bibliotecários" });
+  } else {
+    const at = rows.filter(r=>r.status==="ativo").length;
+    cards.push({ v: at, l: "Ativos" }, { v: rows.length-at, l: "Concluídos" });
+  }
+  $("#stats").innerHTML = cards.map(c => `<div class="stat"><div class="v">${c.v}</div><div class="l">${c.l}</div></div>`).join("");
+}
+
+// ===================== API =====================
+async function api(method, path, body){
+  const opt = { method, headers: { "Content-Type": "application/json" } };
+  if (body) opt.body = JSON.stringify(body);
+  const r = await fetch(`/api/${path}`, opt);
+  const data = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+  return data;
+}
+
+async function refreshCounts(){
+  await Promise.all(Object.keys(SCHEMAS).map(async k => {
+    try { const r = await api("GET", SCHEMAS[k].coll); counts[k] = r.length; }
+    catch { counts[k] = "!"; $("#led").classList.add("off"); $("#connTxt").textContent = "Sem conexão"; }
+  }));
+  renderNav();
+}
+
+// ===================== tabela =====================
+function filtered(){
+  const term = $("#search").value.trim().toLowerCase();
+  if (!term) return rows;
+  return rows.filter(d => JSON.stringify(d).toLowerCase().includes(term));
+}
+
+function renderTable(){
+  const s = SCHEMAS[current];
+  const area = $("#tableArea");
+  const data = filtered();
+  if (!rows.length){
+    area.innerHTML = `<div class="empty">${IC.empty}<div>Nenhum ${s.singular.toLowerCase()} cadastrado.</div>
+      <div style="margin-top:6px;font-size:13px">Clique em <strong>Novo ${s.singular}</strong> para inserir o primeiro.</div></div>`;
+    return;
+  }
+  if (!data.length){ area.innerHTML = `<div class="empty">${IC.empty}<div>Nada encontrado para a busca.</div></div>`; return; }
+
+  const cols = s.columns;
+  const head = `<th style="width:42px"></th>` + cols.map(c=>`<th${c.w?` style="width:${c.w}"`:""}>${c.h}</th>`).join("");
+  const body = data.map(d => {
+    const id = d._id;
+    const cells = cols.map(c=>`<td>${c.render(d)}</td>`).join("");
+    const isOpen = openRow === id;
+    return `<tr class="row ${isOpen?"open":""}" data-id="${esc(id)}">
+        <td>${IC.chev}</td>${cells}</tr>
+      <tr class="detail ${isOpen?"open":""}" data-detail="${esc(id)}"><td colspan="${cols.length+1}">
+        <div class="detail-inner"><div class="detail-pad">
+          <pre class="json">${jsonHi(stripDoc(d))}</pre>
+          <div class="detail-actions">
+            <button class="btn btn-ghost" data-act="edit" data-id="${esc(id)}">${IC.edit} Editar</button>
+            <button class="btn btn-ghost" data-act="copy" data-id="${esc(id)}">${IC.copy} Copiar JSON</button>
+            <button class="btn btn-ghost" data-act="del" data-id="${esc(id)}" style="color:var(--redm);border-color:rgba(255,77,94,.3)">${IC.trash} Excluir</button>
+          </div>
+        </div></div>
+      </td></tr>`;
+  }).join("");
+  area.innerHTML = `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+
+  area.querySelectorAll("tr.row").forEach(tr => tr.onclick = () => toggleRow(tr.dataset.id));
+  area.querySelectorAll("button[data-act]").forEach(b => b.onclick = e => { e.stopPropagation(); rowAction(b.dataset.act, b.dataset.id); });
+}
+
+function stripDoc(d){ const o = {...d}; const id = o._id; delete o._id; return { _key: id, ...o }; }
+
+function toggleRow(id){ openRow = (openRow===id)?null:id; renderTable(); }
+
+async function rowAction(act, id){
+  const s = SCHEMAS[current];
+  if (act === "edit"){ const d = rows.find(r=>r._id===id) || await api("GET", `${s.coll}/${encodeURIComponent(id)}`); openDrawer(d); return; }
+  if (act === "copy"){
+    const d = rows.find(r=>r._id===id);
+    try { await navigator.clipboard.writeText(JSON.stringify(stripDoc(d), null, 2)); toast("JSON copiado"); }
+    catch { toast("Não foi possível copiar", "err"); }
+    return;
+  }
+  if (act === "del"){
+    if (!confirm(`Excluir o documento ${id}?`)) return;
+    try { await api("DELETE", `${s.coll}/${encodeURIComponent(id)}`); toast(`Excluído: ${id}`); if(openRow===id) openRow=null; await reload(); }
+    catch(e){ toast(e.message, "err"); }
+  }
+}
+
+// ===================== drawer / form =====================
+function fieldHtml(f, locked){
+  const id = `fld_${f.k}`;
+  let input;
+  if (f.t === "select") input = `<select id="${id}">${f.opts.map(o=>`<option>${o}</option>`).join("")}</select>`;
+  else { const type = f.t==="number"?"number":f.t==="date"?"date":"text";
+    input = `<input id="${id}" type="${type}" placeholder="${f.ph||""}"${locked?" disabled":""} />`; }
+  return `<div><label>${f.lbl}${f.req?' <span class="req">*</span>':""}</label>${input}${f.hint?`<div class="hint">${f.hint}</div>`:""}</div>`;
+}
+
+function renderForm(){
+  const s = SCHEMAS[current];
+  let html = "";
+  for (let i=0;i<s.fields.length;i++){
+    const f = s.fields[i], next = s.fields[i+1];
+    const locked = editingKey && f.lockOnEdit;
+    if (f.half && next && next.half){ html += `<div class="row2">${fieldHtml(f,locked)}${fieldHtml(next, editingKey&&next.lockOnEdit)}</div>`; i++; }
+    else html += fieldHtml(f, locked);
+  }
+  $("#form").innerHTML = html;
+}
+
+function openDrawer(doc){
+  const s = SCHEMAS[current];
+  editingKey = doc ? doc._id : null;
+  $("#drawerIco").innerHTML = s.icon;
+  $("#drawerTitle").textContent = editingKey ? `Editar ${s.singular}` : `Novo ${s.singular}`;
+  $("#drawerSub").textContent = editingKey ? editingKey : "novo documento";
+  $("#saveBtn").textContent = editingKey ? "Salvar alterações" : "Inserir";
+  renderForm();
+  if (doc) fillForm(doc);
+  $("#drawer").classList.add("open"); $("#backdrop").classList.add("open");
+  setTimeout(()=>{ const first = $("#form input:not([disabled]), #form select"); first && first.focus(); }, 320);
+}
+function closeDrawer(){ $("#drawer").classList.remove("open"); $("#backdrop").classList.remove("open"); editingKey=null; }
+
+function fillForm(d){
+  const s = SCHEMAS[current];
+  const data = s.fromDoc ? s.fromDoc(d) : d;
+  for (const f of s.fields){
+    const el = $(`#fld_${f.k}`); if(!el) continue;
+    if (f.k === "id"){ el.value = d._id || ""; continue; }
+    let v = data[f.k];
+    if (f.t === "list") v = Array.isArray(v) ? v.join(", ") : (v||"");
+    el.value = v ?? "";
+  }
+}
+
+function readForm(){
+  const s = SCHEMAS[current]; const raw = {};
+  for (const f of s.fields){
+    const el = $(`#fld_${f.k}`); let v = el.value;
+    if (f.t === "list") v = v.split(",").map(x=>x.trim()).filter(Boolean);
+    else if (f.t === "number") v = v===""?null:Number(v);
+    raw[f.k] = v;
+  }
+  const id = raw.id;
+  let doc = s.toDoc ? s.toDoc(raw) : (()=>{ const o={...raw}; delete o.id; return o; })();
+  return { id, doc };
+}
+
+async function save(){
+  const s = SCHEMAS[current];
+  const { id, doc } = readForm();
+  try {
+    if (editingKey){ await api("PUT", `${s.coll}/${encodeURIComponent(editingKey)}`, doc); toast(`Alterado: ${editingKey}`); openRow = editingKey; }
+    else { const c = await api("POST", s.coll, { id, ...doc }); toast(`Inserido: ${c._id}`); openRow = c._id; }
+    closeDrawer(); await reload();
+  } catch(e){ toast(e.message, "err"); }
+}
+
+// ===================== fluxo =====================
+async function reload(){
+  const s = SCHEMAS[current];
+  try { rows = await api("GET", s.coll); $("#led").classList.remove("off"); $("#connTxt").textContent="Conectado"; }
+  catch(e){ rows = []; $("#led").classList.add("off"); $("#connTxt").textContent="Sem conexão";
+    $("#tableArea").innerHTML = `<div class="empty">${IC.err}<div>Erro: ${esc(e.message)}</div>
+      <div style="margin-top:6px;font-size:13px">O Couchbase está rodando e populado? (<code>npm run seed</code>)</div></div>`;
+    counts[current]="!"; renderNav(); renderStats(); return; }
+  counts[current] = rows.length;
+  renderNav(); renderStats(); renderTable();
+}
+
+function switchSection(){
+  const s = SCHEMAS[current];
+  setAccent();
+  $("#secTitle").textContent = s.label;
+  $("#secSub").textContent = s.sub;
+  $("#newLbl").textContent = `Novo ${s.singular}`;
+  renderNav();
+  $("#tableArea").innerHTML = `<div class="loading">Carregando…</div>`;
+  reload();
+}
+
+// eventos
+$("#themeBtn").onclick = toggleTheme;
+$("#newBtn").onclick = () => openDrawer(null);
+$("#cancelBtn").onclick = closeDrawer;
+$("#drawerClose").onclick = closeDrawer;
+$("#backdrop").onclick = closeDrawer;
+$("#saveBtn").onclick = save;
+$("#search").oninput = renderTable;
+document.addEventListener("keydown", e => { if(e.key==="Escape") closeDrawer(); });
+
+// boot
+let savedTheme = "dark";
+try { savedTheme = localStorage.getItem("biblio-theme") || "dark"; } catch {}
+applyTheme(savedTheme);
+setAccent();
+switchSection();
+refreshCounts();
+</script>
+</body>
+</html>

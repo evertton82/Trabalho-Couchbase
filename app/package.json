@@ -1,0 +1,26 @@
+{
+  "name": "trabalho-couchbase-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicação CRUD em Node.js + Couchbase para o trabalho de Bancos NoSQL",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "web": "node src/server.js",
+    "seed": "node src/seed.js",
+    "demo": "node src/demo.js",
+    "crud:books": "node src/crud/books.js",
+    "crud:users": "node src/crud/users.js",
+    "crud:loans": "node src/crud/loans.js",
+    "query:find": "node src/queries/find.js",
+    "query:match-project": "node src/queries/match-project.js",
+    "query:aggregate": "node src/queries/aggregate.js",
+    "query:lookup": "node src/queries/lookup.js",
+    "query:unwind": "node src/queries/unwind.js"
+  },
+  "dependencies": {
+    "couchbase": "^4.4.5"
+  }
+}

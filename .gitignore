@@ -1,0 +1,25 @@
+# Dependências
+node_modules/
+
+# Variáveis locais
+app/.env
+*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Saída de build
+dist/
+build/
+coverage/
+
+# Volumes / dumps locais
+docker/data/
+*.zip

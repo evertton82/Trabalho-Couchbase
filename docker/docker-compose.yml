@@ -1,0 +1,48 @@
+name: trabalho-couchbase
+
+services:
+  couchbase:
+    image: couchbase/server:community-7.6.2
+    container_name: couchbase
+    restart: unless-stopped
+    ports:
+      - "8091:8091"   # Web Console
+      - "8092:8092"   # API de Views (CAPI)
+      - "8093:8093"   # Query Service (N1QL)
+      - "8094:8094"   # Search Service (FTS)
+      - "8095:8095"   # Analytics Service
+      - "8096:8096"   # Eventing Service
+      - "11210:11210" # KV / memcached binary
+      - "11211:11211" # KV legado
+      - "18091:18091" # Web Console SSL
+      - "18093:18093" # Query SSL
+    volumes:
+      - couchbase-data:/opt/couchbase/var
+    ulimits:
+      nofile:
+        soft: 40960
+        hard: 40960
+    # Healthcheck via página pública do console (200 antes E depois do init).
+    # NÃO usar /pools: após o cluster inicializado ele exige auth e devolve 401,
+    # marcando o container como "unhealthy" sem motivo.
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8091/ui/index.html"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  init:
+    image: couchbase/server:community-7.6.2
+    container_name: couchbase-init
+    depends_on:
+      couchbase:
+        condition: service_healthy
+    volumes:
+      - ./init:/init
+    entrypoint: ["/bin/bash", "/init/init-cluster.sh"]
+    profiles:
+      - setup
+
+volumes:
+  couchbase-data:
